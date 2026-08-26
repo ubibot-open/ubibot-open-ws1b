@@ -76,3 +76,9 @@ Desktop.ini
 *.workspace # General workspace files, can be from various tools
 *.suo       # Visual Studio Solution User Options
 *.sln.docstates # Visual Studio
+
+# VS Code workspace settings: contains per-developer absolute ESP-IDF/tool
+# paths (idf.espIdfPathWin, idf.pythonInstallPath, idf.customExtraVars, ...)
+# that only make sense on the machine that set them. c_cpp_properties.json
+# and launch.json stay tracked since they're machine-independent.
+.vscode/settings.json
