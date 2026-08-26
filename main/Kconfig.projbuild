@@ -1,0 +1,63 @@
+menu "UbiBot WS1B Configuration"
+
+    menu "WiFi Configuration"
+
+        config USR_WIFI_SSID
+            string "WiFi SSID"
+            default "TEST24"
+            help
+                SSID (network name) the device connects to for reporting data.
+
+        config USR_WIFI_PASSWORD
+            string "WiFi Password"
+            default ""
+            help
+                WiFi password (WPA/WPA2) for the SSID above. Leave empty for an
+                open network.
+
+        config USR_WIFI_COUNTRY_CODE
+            string "WiFi country code"
+            default "01"
+            help
+                Two-letter WiFi regulatory country code (e.g. "CN", "US"), or
+                "01" for the world-safe default channel/power settings.
+
+    endmenu
+
+    menu "Server Configuration"
+
+        config USR_HTTP_HOST
+            string "Data server host"
+            default "192.168.2.71"
+            help
+                IP address or domain name of the server the device reports
+                sensor data and syncs time with.
+
+        config USR_HTTP_PORT
+            int "Data server port"
+            default 8080
+            range 1 65535
+
+    endmenu
+
+    menu "Device Identity"
+
+        config USR_PID
+            string "Device product ID"
+            default "ubibot-ws1b"
+            help
+                Product identifier reported to the server, shared by every
+                device of this firmware/hardware model.
+
+        config USR_SN
+            string "Device serial number"
+            default "RV41554WS1B"
+            help
+                Unique serial number for this physical device. Each unit
+                should be flashed with its own value here (set via
+                `idf.py menuconfig` before building) rather than sharing one
+                baked-in value across a production batch.
+
+    endmenu
+
+endmenu
