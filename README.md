@@ -1,21 +1,21 @@
-编译环境，Windows vscode，esp-idf v5.5.4
+Build environment: Windows, VS Code, ESP-IDF v6.0.2
 
-## 配置
+## Configuration
 
-设备身份、WiFi 和服务器参数改为通过 menuconfig 配置，不再直接写死在源码里：
+Device identity, WiFi, and server parameters are configured via `menuconfig` instead of being hardcoded in the source:
 
 ```bash
 idf.py menuconfig
 ```
 
-进入 `UbiBot WS1B Configuration` 菜单，按需修改：
+Go to the `UbiBot WS1B Configuration` menu and adjust as needed:
 
-- **WiFi Configuration**：WiFi 名称 / 密码 / 国家码
-- **Server Configuration**：服务器地址 / 端口
-- **Device Identity**：设备 PID / 序列号（SN，每台设备应使用各自唯一的序列号）
+- **WiFi Configuration**: WiFi SSID / password / country code
+- **Server Configuration**: server host / port
+- **Device Identity**: device PID / serial number (SN — each physical device should use its own unique value)
 
-配置结果保存在本地的 `sdkconfig` 文件中（已在 `.gitignore` 中排除，不会被提交），首次构建或运行 `idf.py menuconfig` 后会自动生成。默认值定义在 [main/Kconfig.projbuild](main/Kconfig.projbuild)。
+The resulting configuration is saved to the local `sdkconfig` file (excluded via `.gitignore`, so it is never committed) and is generated automatically on first build or after running `idf.py menuconfig`. Default values are defined in [main/Kconfig.projbuild](main/Kconfig.projbuild).
 
-## 许可证
+## License
 
-本项目基于 [MIT License](LICENSE) 开源。
+This project is open-sourced under the [MIT License](LICENSE).
