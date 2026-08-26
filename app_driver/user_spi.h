@@ -9,8 +9,8 @@
   *
   *
 *******************************************************************************/
-#ifndef __SPI_H__
-#define __SPI_H__
+#ifndef USER_SPI_H
+#define USER_SPI_H
 
 /*-------------------------------- Includes ----------------------------------*/
 #include "stdint.h"
@@ -32,7 +32,7 @@ extern void UserSpiInit(void);
  */
 extern uint8_t SPI_SendReciveByte(uint8_t addr);
 
-#endif //  __SPI_H__
+#endif //  USER_SPI_H
 
 /*******************************************************************************
                                       END         

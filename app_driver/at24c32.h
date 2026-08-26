@@ -9,8 +9,8 @@
   *
   *
 *******************************************************************************/
-#ifndef __AT24C32_H__
-#define __AT24C32_H__
+#ifndef AT24C32_H
+#define AT24C32_H
 
 /*-------------------------------- Includes ----------------------------------*/
 #include "stdint.h"
@@ -34,7 +34,7 @@ extern void at24c32_write_buf(uint16_t addr, uint8_t *buf, uint8_t size);
  */
 extern void at24c32_read_buf(uint16_t addr, uint8_t *buf, uint8_t size);
 
-#endif  // __AT24C32_H__
+#endif  // AT24C32_H
 
 /*******************************************************************************
                                       END         

@@ -11,8 +11,8 @@
 *******************************************************************************/  
 
 /*-------------------------------- Includes ----------------------------------*/
-#ifndef __OSI_H__
-#define	__OSI_H__
+#ifndef OSI_H
+#define	OSI_H
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"

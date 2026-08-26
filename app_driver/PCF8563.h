@@ -9,8 +9,8 @@
   *
   *
 *******************************************************************************/
-#ifndef __PCF8563_H__
-#define __PCF8563_H__
+#ifndef PCF8563_H
+#define PCF8563_H
 
 /*-------------------------------- Includes ----------------------------------*/
 #include "stdint.h"
@@ -70,7 +70,7 @@ extern void Update_UnixTime(uint32_t unix_tm);
  */
 extern void Read_UTCtime(char *buffer,uint8_t buf_size);
 
-#endif //  __PCF8563_H__
+#endif //  PCF8563_H
 
 /*******************************************************************************
                                       END         

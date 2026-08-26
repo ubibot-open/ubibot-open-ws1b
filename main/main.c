@@ -1,8 +1,8 @@
 /*******************************************************************************
-  * @file       MAIN FUNCTION PROTOTYPES      
-  * @author 
+  * @file       MAIN FUNCTION PROTOTYPES
+  * @author
   * @version
-  * @date 
+  * @date
   * @brief
   ******************************************************************************
   * @attention
@@ -34,137 +34,17 @@
 #include "wifi_connect.h"
 #include "MsgType.h"
 
+#include "indicators.h"
+#include "power_mgmt.h"
+#include "json_payload.h"
+
 #define TAG "MAIN"
 
 EventGroupHandle_t Nets_Group;
 OsiSyncObj_t SW1_Binary;  //For Button interrupt task
 OsiMsgQ_t Data_Queue;  //Used field data save
 
-bool sw_wakeup=0;
 bool dev_power_on = 0;  //device power on
-
-/**
- * @brief  Turns on the green LED indicator.
- */
-void SET_GREEN_LED_ON(void)
-{
-  gpio_set_level(led1_pin, 1);
-}
-/**
- * @brief  Turns off the green LED indicator.
- */
-void SET_GREEN_LED_OFF(void)
-{
-  gpio_set_level(led1_pin, 0);
-}
-/**
- * @brief  Turns on the red LED indicator.
- */
-void SET_RED_LED_ON(void)
-{
-  gpio_set_level(led2_pin, 1);
-}
-/**
- * @brief  Turns off the red LED indicator.
- */
-void SET_RED_LED_OFF(void)
-{
-  gpio_set_level(led2_pin, 0);
-}
-
-/**
- * @brief  Green LED blink task. Loops, alternately turning the green LED on and off at 500ms intervals, to indicate that the network data reporting process is in progress; the task itself never exits.
- * @param  pvParameters Parameter passed in when the FreeRTOS task is created (unused)
- */
-void G_Led_Task(void *pvParameters)
-{
-  for(;;)
-  {
-    SET_GREEN_LED_ON();
-    osi_Sleep(500);  //delay 500ms
-      
-    SET_GREEN_LED_OFF();
-    osi_Sleep(500);  //delay 500ms
-  }
-}
-
-/**
- * @brief  Button 1 interrupt handling task. Blocks waiting for the button interrupt sync signal; after receiving it, delays briefly for debouncing, and if the button is still detected as pressed or a wake-up flag is set, triggers the buzzer as an audible alert; then clears the sync signal and loops waiting for the next interrupt.
- * @param  pvParameters Parameter passed in when the FreeRTOS task is created (unused)
- */
-void SW1_Task( void *pvParameters )
-{
-  for(;;)
-  {
-    osi_SyncObjWait(&SW1_Binary,OSI_WAIT_FOREVER);  //Waite Button GPIO Interrupt Message 
-
-    osi_Sleep(10);
-    if((gpio_get_level(sw1int_pin))||(sw_wakeup==1))
-    {
-      sw_wakeup=0;
-      buzzer_on(200);
-    }
-    osi_SyncObjClear(&SW1_Binary);  //clear task message
-  }
-}
-
-/**
- * @brief  Handles the reason the device woke from deep sleep. If the wake-up cause is the EXT1 external pin and it is determined to have been triggered by button 1 (sw1int_pin), and the device is not currently in a power-on state, sets the software wake-up flag and sends the sync signal to the button 1 task from ISR context.
- */
-void WakeUp_Process(void)
-{
-  uint64_t wakeup_pin_mask;
-  unsigned long ret_val = esp_sleep_get_wakeup_cause();
-  switch(ret_val)
-  {
-    case ESP_SLEEP_WAKEUP_EXT1:
-    {
-      wakeup_pin_mask = esp_sleep_get_ext1_wakeup_status();
-      if(((wakeup_pin_mask>>sw1int_pin)&0x01)&&(dev_power_on==0))
-      {
-        ESP_LOGI(TAG, "%d,sw1 int", __LINE__);
-        sw_wakeup = 1;
-        osi_SyncObjSignalFromISR(&SW1_Binary);
-      }
-    }
-    break;
-    default:
-    break;
-  }
-}
-
-/**
- * @brief  Puts the device into deep sleep mode, enabling both the timer wake-up source and the button 1 (EXT1, level-triggered) wake-up source.
- * @param  slp_time Sleep duration for the timer wake-up, in seconds
- */
-void Enter_Sleep(unsigned long slp_time)
-{
-  ESP_LOGI(TAG,"slp_time=%ld", slp_time);
-  esp_sleep_enable_timer_wakeup(slp_time * 1000000);  //
-  const int ext_wakeup_pin_1 = sw1int_pin;
-  const uint64_t ext_wakeup_pin_1_mask = 1ULL << ext_wakeup_pin_1;
-  esp_sleep_enable_ext1_wakeup(ext_wakeup_pin_1_mask, ESP_EXT1_WAKEUP_ANY_HIGH);
-  ESP_LOGI(TAG, "SET BUTTON1 wakeup");
-	esp_deep_sleep_start();
-}
-
-/**
- * @brief  Builds the JSON payload used for the time-synchronization HTTP request, containing only the device PID and serial number, and copies the serialized string into the caller-provided buffer.
- * @param  read_buf Output buffer that receives the serialized JSON string.
- * @param  buf_len Size of read_buf, in bytes; the serialized string is only copied in if it fits within this length.
- */
-void Device_PostData_Read(char *read_buf,uint16_t buf_len)
-{
-  char *out_buf;
-  cJSON *pJsonRoot;
-  pJsonRoot=cJSON_CreateObject();
-  cJSON_AddStringToObject(pJsonRoot,"pid",USR_PID);
-  cJSON_AddStringToObject(pJsonRoot,"sn",USR_SN);
-  out_buf = cJSON_PrintUnformatted(pJsonRoot);  
-  if(strlen(out_buf)<buf_len) mem_copy(read_buf,out_buf,strlen(out_buf)); 
-  free(out_buf);
-  cJSON_Delete(pJsonRoot);  //delete cjson root
-}
 
 /**
  * @brief  Samples all onboard/external sensors (temperature & humidity, ambient light, battery voltage, and the two external temperature probes) once and pushes each valid reading into the sensor message queue for later reporting. Readings equal to ERROR_CODE are discarded and not enqueued.
@@ -225,48 +105,12 @@ void Sensors_Data_Update(void)
 }
 
 /**
- * @brief  Drains the sensor message queue and builds the JSON payload used for the data-reporting HTTP request (device PID, serial number, timestamp, and a "payloads" array with one field/value entry per queued sensor message), then copies the serialized string into the caller-provided buffer.
- * @param  read_buf Output buffer that receives the serialized JSON string.
- * @param  buf_len Size of read_buf, in bytes; the serialized string is only copied in if it fits within this length.
- */
-void Sensors_PostData_Read(char *read_buf,uint16_t buf_len)
-{
-  char *out_buf;
-  cJSON *pJsonRoot;
-  OsiReturnVal_e msg_result = OSI_FAILURE;
-  SensorMessage sMsg={0};
-  char field[9]={0};
-  sMsg.ts = Read_UnixTime();
-  pJsonRoot=cJSON_CreateObject();
-  cJSON_AddStringToObject(pJsonRoot,"pid",USR_PID);
-  cJSON_AddStringToObject(pJsonRoot,"sn",USR_SN);
-  cJSON_AddNumberToObject(pJsonRoot,"ts",sMsg.ts);
-  cJSON *json_arry,*json_arrys = cJSON_CreateArray();
-  cJSON_AddItemToObject(pJsonRoot,"payloads",json_arrys);
-  for(uint8_t j=0;j<USR_POST_DATA_SUM;j++)
-  {
-    msg_result = osi_MsgQRead(&Data_Queue,&sMsg,OSI_NO_WAIT);  //read field Value Message
-    if(msg_result != OSI_OK) break;
-    mem_set(field,0,sizeof(field));
-    snprintf(field,sizeof(field),"field%d",sMsg.sensornum);  //fields number
-    json_arry = cJSON_CreateObject();
-    cJSON_AddItemToArray(json_arrys,json_arry);
-    cJSON_AddNumberToObject(json_arry,"ts",sMsg.ts);  //
-    cJSON_AddNumberToObject(json_arry,field,sMsg.sensorval);
-  }
-  out_buf = cJSON_PrintUnformatted(pJsonRoot);
-  if(strlen(out_buf)<buf_len) mem_copy(read_buf,out_buf,strlen(out_buf)); 
-  free(out_buf);
-  cJSON_Delete(pJsonRoot);  //delete cjson root
-}
-
-/**
  * @brief  Main business loop task: if the local time has not yet been synchronized (earlier than 2026-1-1), connects to the network first to synchronize time with the server; then successively collects temperature/humidity, light level, battery voltage, and the two external temperature sensor readings and writes them into the message queue; connects to the network again to package and report the queued data to the server; and finally enters deep sleep to wait for the next wake-up before repeating the cycle.
  * @param  pvParameters Parameter passed in when the FreeRTOS task is created (unused)
  */
 void Main_Task(void *pvParameters)
 {
-  short res_val=-1; 
+  short res_val=-1;
   char *http_tx_buf;
   char *http_rx_buf;
   for(;;)
@@ -277,12 +121,12 @@ void Main_Task(void *pvParameters)
     http_tx_buf = heap_caps_malloc(HTTP_TX_BUFF_LEN, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);  //Allocate HTTP request buffer from SPIRAM
     if(http_tx_buf==NULL)
     {
-      ESP_LOGI(TAG, "http_tx_buf heap_caps_malloc failed %d", __LINE__);
+      ESP_LOGE(TAG, "http_tx_buf heap_caps_malloc failed %d", __LINE__);
     }
     http_rx_buf = heap_caps_malloc(HTTP_RX_BUFF_LEN, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);  //Allocate HTTP response buffer from SPIRAM
     if(http_rx_buf==NULL)
     {
-      ESP_LOGI(TAG, "http_rx_buf heap_caps_malloc failed %d", __LINE__);
+      ESP_LOGE(TAG, "http_rx_buf heap_caps_malloc failed %d", __LINE__);
     }
     if((http_tx_buf!=NULL)&&(http_rx_buf!=NULL))
     {
@@ -295,39 +139,39 @@ void Main_Task(void *pvParameters)
           mem_set(http_rx_buf,0,HTTP_RX_BUFF_LEN);
 
           Device_PostData_Read(http_tx_buf,HTTP_TX_BUFF_LEN);  //Build the time-sync request JSON payload
-          
+
           //Send time-sync request and parse the response
-          res_val = HTTP_Post_Method(USR_HTTP_HOST,USR_HTTP_TIME_URL,USR_HTTP_PORT,http_tx_buf,strlen(http_tx_buf),http_rx_buf,HTTP_RX_BUFF_LEN,Parse_Response);  
+          res_val = HTTP_Post_Method(USR_HTTP_HOST,USR_HTTP_TIME_URL,USR_HTTP_PORT,http_tx_buf,strlen(http_tx_buf),http_rx_buf,HTTP_RX_BUFF_LEN,Parse_Response);
           if(res_val == SUCCESS)
           {
             ESP_LOGI(TAG, "%d,update time success.", __LINE__);
           }
           else
           {
-            ESP_LOGI(TAG, "%d,update time failed,code=%d.", __LINE__,res_val);
+            ESP_LOGW(TAG, "%d,update time failed,code=%d.", __LINE__,res_val);
           }
         }
 
         mem_set(http_tx_buf,0,HTTP_TX_BUFF_LEN);
         mem_set(http_rx_buf,0,HTTP_RX_BUFF_LEN);
-        
+
         Sensors_Data_Update();  //Sample all sensors and enqueue readings
         Sensors_PostData_Read(http_tx_buf,HTTP_TX_BUFF_LEN);  //Build the data-report request JSON payload from the queue
-        
+
         //Send sensor data report and parse the response
         res_val = HTTP_Post_Method(USR_HTTP_HOST,USR_HTTP_DATA_URL,USR_HTTP_PORT,http_tx_buf,strlen(http_tx_buf),http_rx_buf,HTTP_RX_BUFF_LEN,Parse_Response);
         if(res_val == SUCCESS)
         {
           ESP_LOGI(TAG, "%d,post data success.", __LINE__);
-        } 
+        }
         else
         {
-          ESP_LOGI(TAG, "%d,post data failed,code=%d.", __LINE__,res_val);
+          ESP_LOGW(TAG, "%d,post data failed,code=%d.", __LINE__,res_val);
         }
       }
       else
       {
-        ESP_LOGI(TAG, "WiFi_Connect failed! \n");
+        ESP_LOGW(TAG, "WiFi_Connect failed! \n");
       }
       WiFi_Disconnect();  //Disconnect from the AP
       free(http_tx_buf);
@@ -343,18 +187,18 @@ void Main_Task(void *pvParameters)
 void app_main(void)
 {
   esp_err_t ret = nvs_flash_init();  //Initialize NVS
-  if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) 
+  if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
   {
     ret = nvs_flash_erase();  //Erase NVS partition
     if(ret!=ESP_OK)
     {
-      ESP_LOGI(TAG, "%dv,nvs_flash_erase failed.", __LINE__);
+      ESP_LOGE(TAG, "%dv,nvs_flash_erase failed.", __LINE__);
     }
     ret = nvs_flash_init();  //Re-initialize NVS after erase
   }
   if(ret!=ESP_OK)
   {
-    ESP_LOGI(TAG, "%dv,nvs_flash_init failed.", __LINE__);
+    ESP_LOGE(TAG, "%dv,nvs_flash_init failed.", __LINE__);
   }
 
   Nets_Group = xEventGroupCreate();  //Create event group for network status flags
@@ -380,15 +224,11 @@ void app_main(void)
   }
   WakeUp_Process();  //Handle deep-sleep wake-up cause
 
-  osi_TaskCreate(SW1_Task, NULL,2048,NULL, 9, NULL);  //Create Button Interrupt_Task 
+  osi_TaskCreate(SW1_Task, NULL,2048,NULL, 9, NULL);  //Create Button Interrupt_Task
   osi_TaskCreate(G_Led_Task, NULL,2048, NULL, 7,NULL);  //Create GREEN LED Blink Task
   osi_TaskCreate(Main_Task, NULL,8192,NULL, 5, NULL);  //Create net Task
 }
 
 /*******************************************************************************
-                                      END         
+                                      END
 *******************************************************************************/
-
-
-
-

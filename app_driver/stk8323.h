@@ -6,8 +6,8 @@
 * Description        :
 *
 ********************************************************************************/
-#ifndef __STK832X_H__
-#define __STK832X_H__
+#ifndef STK832X_H
+#define STK832X_H
 
 #include "stdint.h"
 
@@ -224,7 +224,7 @@ extern uint8_t stk8323_intstatus(void);
  */
 extern void stk832x_getdata(short int *X_DataOut, short int *Y_DataOut, short int *Z_DataOut);
 
-#endif /* ifndef __STK832X_H__ */
+#endif /* ifndef STK832X_H */
 
 /*******************************************************************************
                                       END         

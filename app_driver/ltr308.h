@@ -9,8 +9,8 @@
   *
   *
 *******************************************************************************/
-#ifndef __LIGHT_SENSOR_H__
-#define __LIGHT_SENSOR_H__
+#ifndef LIGHT_SENSOR_H
+#define LIGHT_SENSOR_H
 
 /*-------------------------------- Includes ----------------------------------*/
 #include "stdint.h"
@@ -53,7 +53,7 @@ extern int LightSensor_Init(void);
  */
 extern void LightSensor_value(float *lightvalue);
 
-#endif //  __LIGHT_SENSOR_H__
+#endif //  LIGHT_SENSOR_H
 
 /*******************************************************************************
                                       END         

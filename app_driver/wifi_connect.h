@@ -11,8 +11,8 @@
 *******************************************************************************/
 
 /*-------------------------------- Includes ----------------------------------*/
-#ifndef __WiFi_CONNECT__
-#define __WiFi_CONNECT__
+#ifndef WIFI_CONNECT_H
+#define WIFI_CONNECT_H
 
 #define CONNECTED_BIT (1 << 0)    //wifi connected flag
 #define WIFI_S_I_BIT (1 << 1)     //wifi start initialization flag
@@ -45,7 +45,7 @@ extern int WiFi_Connect(char *ssid, char *password,char *country_code);
  */
 extern void WiFi_Disconnect(void);
 
-#endif  //__WiFi_CONNECT__
+#endif  //WIFI_CONNECT_H
 
 /*******************************************************************************
                                       END         

@@ -57,8 +57,8 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt)
         int mbedtls_err = 0;
         esp_err_t err = esp_tls_get_and_clear_last_error((esp_tls_error_handle_t)evt->data, &mbedtls_err, NULL);
         if (err != 0) {
-            ESP_LOGI(TAG, "Last esp error code: 0x%x", err);
-            ESP_LOGI(TAG, "Last mbedtls failure: 0x%x", mbedtls_err);
+            ESP_LOGW(TAG, "Last esp error code: 0x%x", err);
+            ESP_LOGW(TAG, "Last mbedtls failure: 0x%x", mbedtls_err);
         }
         break;
     case HTTP_EVENT_REDIRECT:
@@ -124,12 +124,12 @@ static int readResponse(esp_http_client_handle_t httpClient,char *http_rx_buf,ui
     }
     else
     {
-      ESP_LOGI(TAG, "Failed to read response, data_read = %d",data_read);
+      ESP_LOGE(TAG, "Failed to read response, data_read = %d",data_read);
     }
   }
   else
   {
-    ESP_LOGI(TAG, "HTTP client fetch headers failed.content_length=%d",content_length);
+    ESP_LOGE(TAG, "HTTP client fetch headers failed.content_length=%d",content_length);
   }
   return lRetVal;
 }

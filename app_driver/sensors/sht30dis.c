@@ -43,12 +43,28 @@ void sht30_SingleShotMeasure(float *temp,float *humi)
   };
   uint8_t write_buf[2] = {0x24,0x00};
   i2c_master_dev_handle_t dev_handle;
-  i2c_master_bus_add_device(bus_handle, &dev_config, &dev_handle);
-  i2c_master_transmit(dev_handle, write_buf, 2, I2C_MASTER_TIMEOUT_MS / portTICK_PERIOD_MS);
+  esp_err_t err = i2c_master_bus_add_device(bus_handle, &dev_config, &dev_handle);
+  if(err != ESP_OK)
+  {
+    ESP_LOGE(TAG, "add_device failed: %s", esp_err_to_name(err));
+    return;
+  }
+  err = i2c_master_transmit(dev_handle, write_buf, 2, I2C_MASTER_TIMEOUT_MS / portTICK_PERIOD_MS);
+  if(err != ESP_OK)
+  {
+    ESP_LOGE(TAG, "measure command write failed: %s", esp_err_to_name(err));
+    i2c_master_bus_rm_device(dev_handle);
+    return;
+  }
   osi_Sleep(100);
 
-  i2c_master_receive(dev_handle, recive, 6, I2C_MASTER_TIMEOUT_MS / portTICK_PERIOD_MS);
+  err = i2c_master_receive(dev_handle, recive, 6, I2C_MASTER_TIMEOUT_MS / portTICK_PERIOD_MS);
   i2c_master_bus_rm_device(dev_handle);
+  if(err != ESP_OK)
+  {
+    ESP_LOGE(TAG, "measurement read failed: %s", esp_err_to_name(err));
+    return;
+  }
   if(Data_Crc_Check(&recive[0],3)==0)
   {
     tempval=recive[0];

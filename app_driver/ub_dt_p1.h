@@ -9,8 +9,8 @@
   *
   *
 *******************************************************************************/
-#ifndef __UB_DT_P1_H__
-#define __UB_DT_P1_H__
+#ifndef UB_DT_P1_H
+#define UB_DT_P1_H
 
 /*-------------------------------- Includes ----------------------------------*/
 #include "stdint.h"
@@ -24,7 +24,7 @@
  */
 extern void ub_dt_p1_get_temp(float *temp_value1,float *temp_value2);
 
-#endif //  __UB_DT_P1_H__
+#endif //  UB_DT_P1_H
 
 /*******************************************************************************
                                       END         

@@ -10,8 +10,8 @@
   *
 *******************************************************************************/
 
-#ifndef __PINMUX_H__
-#define __PINMUX_H__
+#ifndef PINMUX_H
+#define PINMUX_H
 #include "stdint.h"
 
 #define usbint_pin      2
@@ -51,7 +51,7 @@ extern void PinMuxConfig(void);
  */
 extern void buzzer_on(uint32_t n_msec);
 
-#endif //  __PINMUX_H__
+#endif //  PINMUX_H
 
 
 

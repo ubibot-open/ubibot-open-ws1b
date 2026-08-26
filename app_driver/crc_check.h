@@ -9,8 +9,8 @@
   *
   *
 *******************************************************************************/
-#ifndef __CRC_CHECK_H__
-#define __CRC_CHECK_H__
+#ifndef CRC_CHECK_H
+#define CRC_CHECK_H
 
 /*-------------------------------- Includes ----------------------------------*/
 #include "stdint.h"
@@ -39,7 +39,7 @@ extern uint8_t Data_Crc_Value(uint8_t *data,uint8_t bytes);
  */
 extern uint8_t calcrc_bytes(uint8_t *data_buf,uint8_t bytes);
 
-#endif //  __CRC_CHECK_H__
+#endif //  CRC_CHECK_H
 
 /*******************************************************************************
                                       END         

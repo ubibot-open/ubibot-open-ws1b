@@ -8,13 +8,17 @@
   "idf.portWin": "COM9",
   "idf.toolsPathWin": "c:\\Users\\wangm\\.espressif",
   "idf.customExtraVars": {
+    "OPENOCD_SCRIPTS": "E:\\Users\\1kbyt\\.espressif\\tools\\openocd-esp32\\v0.12.0-esp32-20240318/openocd-esp32/share/openocd/scripts",
+    "IDF_CCACHE_ENABLE": "1",
+    "ESP_ROM_ELF_DIR": "E:\\Users\\1kbyt\\.espressif\\tools\\esp-rom-elfs\\20240305/",
+    "ADF_PATH": "C:\\Users\\cloudforce\\.espressif\\esp-adf",
     "IDF_TARGET": "esp32c5"
   },
-  "clangd.path": "c:\\Users\\wangm\\.espressif\\tools\\esp-clang\\esp-19.1.2_20250312\\esp-clang\\bin\\clangd.exe",
+  "clangd.path": "E:\\Espressif\\tools\\esp-clang\\esp-20.1.1_20250829\\esp-clang\\bin\\clangd.exe",
   "clangd.arguments": [
     "--background-index",
     "--query-driver=**",
-    "--compile-commands-dir=e:\\WangMao\\Ubibot-Hardwares\\WS1B(open)\\build"
+    "--compile-commands-dir=e:\\ubibot-open\\ubibot-ws1b\\build"
   ],
   "idf.currentSetup": "E:\\esp\\v6.0.2\\esp-idf",
   "idf.flashType": "UART"

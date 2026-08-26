@@ -9,8 +9,8 @@
   *
   *
 *******************************************************************************/
-#ifndef __w25Q128_H__
-#define __w25Q128_H__
+#ifndef W25Q128_H
+#define W25Q128_H
 
 /*-------------------------------- Includes ----------------------------------*/
 #include "stdint.h"
@@ -95,7 +95,7 @@ extern void w25q_Read_Data(uint32_t addr,char *buffer,uint16_t size);
  */
 extern void w25q_Write_Data(uint32_t addr,char *buffer,uint16_t Size);
 
-#endif //  __w25Q128_H__
+#endif //  W25Q128_H
 
 /*******************************************************************************
                                       END         

@@ -9,8 +9,8 @@
   *
   *
 *******************************************************************************/
-#ifndef __IIC_H__
-#define __IIC_H__
+#ifndef IIC_H
+#define IIC_H
 
 /*-------------------------------- Includes ----------------------------------*/
 #include "stdint.h"
@@ -68,7 +68,7 @@ extern void IIC_Write_Buf(uint8_t sla_addr,uint8_t reg_addr,uint8_t *buf,uint8_t
  */
 extern void IIC_Read_Buf(uint8_t sla_addr,uint8_t reg_addr,uint8_t *buf,uint8_t len);
 
-#endif //  __IIC_H__
+#endif //  IIC_H
 
 /*******************************************************************************
                                       END         

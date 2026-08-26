@@ -15,8 +15,8 @@
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
 
-#ifndef __MSG_TYPE_H__
-#define __MSG_TYPE_H__
+#ifndef MSG_TYPE_H
+#define MSG_TYPE_H
 
 #define USR_POST_DATA_SUM 20
 

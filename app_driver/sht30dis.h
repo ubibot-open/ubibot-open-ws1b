@@ -9,8 +9,8 @@
   *
   *
 *******************************************************************************/
-#ifndef __SHT30DIS_H__
-#define __SHT30DIS_H__
+#ifndef SHT30DIS_H
+#define SHT30DIS_H
 
 /*-------------------------------- Includes ----------------------------------*/
 #include "stdint.h"
@@ -25,7 +25,7 @@
  */
 extern void sht30_SingleShotMeasure(float *temp,float *humi);
 
-#endif //  __SHT30DIS_H__
+#endif //  SHT30DIS_H
 
 /*******************************************************************************
                                       END         
