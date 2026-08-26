@@ -20,7 +20,6 @@
 #include "iic.h"
 #include "esp_log.h"
 #include "driver/gpio.h"
-#include "driver/rtc_io.h"
 #include "driver/ledc.h"
 #include "esp_sleep.h"
 #include "MsgType.h"

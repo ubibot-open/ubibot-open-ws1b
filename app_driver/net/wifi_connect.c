@@ -173,7 +173,7 @@ int WiFi_Connect(char *ssid, char *password,char *country_code)
     s_staconf.sta.sort_method = 0;
     s_staconf.sta.listen_interval = 0;
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-    ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &s_staconf));
+    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &s_staconf));
     esp_wifi_set_band_mode(WIFI_BAND_MODE_AUTO);
     esp_netif_dhcpc_start(STA_netif_t);
 

@@ -15,8 +15,6 @@
 #include "osi.h"
 #include "iic.h"
 #include "esp_log.h"
-#include "driver/i2c.h"
-#include "driver/rtc_io.h"
 #include "esp_rom_sys.h"
 #include "driver/i2c_master.h"
 

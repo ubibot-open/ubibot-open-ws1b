@@ -1,3 +1,8 @@
 dependencies:
   idf:
     version: ">=5.0"
+  # ESP-IDF v6.0 removed the built-in "json" component (cJSON wrapper) that
+  # this project's code (cJSON.h) relies on; it now needs to be pulled in
+  # explicitly via the component manager. cJSON's own API is unchanged, so
+  # no source changes are needed.
+  espressif/cjson: "^1.7.19"

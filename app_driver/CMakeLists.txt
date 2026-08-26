@@ -1,4 +1,4 @@
-set(requires esp-tls esp_event esp_netif esp_http_client driver json esp_adc esp_wifi esp_timer main)
+set(requires esp-tls esp_event esp_netif esp_http_client driver esp_driver_gpio esp_driver_i2c esp_driver_ledc esp_driver_spi esp_adc esp_wifi esp_timer main)
 
 idf_component_register(SRCS "utils/crc_check.c" "net/wifi_connect.c" "net/http_client.c"
                     "power/pinmux.c" "power/power_adc.c" "bus/iic.c" "bus/user_spi.c"

@@ -15,6 +15,7 @@
 /*-------------------------------- Includes ----------------------------------*/
 #include "stdint.h"
 #include "pinmux.h"
+#include "driver/i2c_master.h"  // for I2C_NUM_0 (I2C_MASTER_NUM) and the i2c_master_bus_handle_t family
 
 #define I2C_MASTER_NUM    I2C_NUM_0 /*!< I2C port number for master dev */
 #define I2C_MASTER_SCL_IO iic_scl_pin     /*!< gpio number for I2C master clock */

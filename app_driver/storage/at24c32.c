@@ -16,8 +16,8 @@
 #include "osi.h" 
 #include "iic.h"
 #include "at24c32.h"
-#include "driver/i2c.h"
 #include "driver/i2c_master.h"
+#include "driver/gpio.h"
 #include "esp_log.h"
 
 #define TAG "at24c32"

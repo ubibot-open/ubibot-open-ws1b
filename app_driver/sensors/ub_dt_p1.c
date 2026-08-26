@@ -15,7 +15,6 @@
 #include "osi.h"
 #include "ub_dt_p1.h"
 #include "driver/gpio.h"
-#include "driver/rtc_io.h"
 #include "pinmux.h"
 #include "crc_check.h"
 #include "MsgType.h"

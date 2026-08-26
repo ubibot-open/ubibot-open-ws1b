@@ -17,7 +17,6 @@
 #include "sht30dis.h"
 #include "iic.h"
 #include "crc_check.h"
-#include "driver/i2c.h"
 #include "esp_log.h"
 #include "driver/i2c_master.h"
 
