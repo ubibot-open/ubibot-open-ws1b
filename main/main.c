@@ -37,6 +37,7 @@
 #include "indicators.h"
 #include "power_mgmt.h"
 #include "json_payload.h"
+#include "provisioning.h"
 
 #define TAG "MAIN"
 
@@ -130,7 +131,7 @@ void Main_Task(void *pvParameters)
     }
     if((http_tx_buf!=NULL)&&(http_rx_buf!=NULL))
     {
-      res_val=WiFi_Connect(USR_SSID, USR_PASSWORD,USR_CONCTRY_CODE);  //Connect to the AP
+      res_val=WiFi_Connect((char *)Provision_GetWifiSsid(), (char *)Provision_GetWifiPassword(),USR_CONCTRY_CODE);  //Connect to the AP, using the provisioned SSID/password if this device has been set up over serial (protocol §1.2), else the menuconfig default
       if(res_val == SUCCESS)
       {
         if(Read_UnixTime()<1767196800)  //before 2026-1-1,update time - Read_UnixTime() gets current local time from RTC
@@ -141,7 +142,7 @@ void Main_Task(void *pvParameters)
           Device_PostData_Read(http_tx_buf,HTTP_TX_BUFF_LEN);  //Build the time-sync request JSON payload
 
           //Send time-sync request and parse the response
-          res_val = HTTP_Post_Method(USR_HTTP_HOST,USR_HTTP_TIME_URL,USR_HTTP_PORT,http_tx_buf,strlen(http_tx_buf),http_rx_buf,HTTP_RX_BUFF_LEN,Parse_Response);
+          res_val = HTTP_Post_Method((char *)Provision_GetHttpHost(),USR_HTTP_TIME_URL,Provision_GetHttpPort(),http_tx_buf,strlen(http_tx_buf),http_rx_buf,HTTP_RX_BUFF_LEN,Parse_Response);
           if(res_val == SUCCESS)
           {
             ESP_LOGI(TAG, "%d,update time success.", __LINE__);
@@ -159,7 +160,7 @@ void Main_Task(void *pvParameters)
         Sensors_PostData_Read(http_tx_buf,HTTP_TX_BUFF_LEN);  //Build the data-report request JSON payload from the queue
 
         //Send sensor data report and parse the response
-        res_val = HTTP_Post_Method(USR_HTTP_HOST,USR_HTTP_DATA_URL,USR_HTTP_PORT,http_tx_buf,strlen(http_tx_buf),http_rx_buf,HTTP_RX_BUFF_LEN,Parse_Response);
+        res_val = HTTP_Post_Method((char *)Provision_GetHttpHost(),USR_HTTP_DATA_URL,Provision_GetHttpPort(),http_tx_buf,strlen(http_tx_buf),http_rx_buf,HTTP_RX_BUFF_LEN,Parse_Response);
         if(res_val == SUCCESS)
         {
           ESP_LOGI(TAG, "%d,post data success.", __LINE__);
@@ -182,7 +183,7 @@ void Main_Task(void *pvParameters)
 }
 
 /**
- * @brief  Program entry point. Initializes NVS storage (erasing and reinitializing on failure), creates the event group, the button sync object, and the sensor message queue, and completes peripheral pin and I2C bus initialization; determines whether this is a power-on boot based on the reset reason, and if so, sounds the buzzer and completes RTC clock and light sensor initialization; processes the sleep wake-up source, then creates the button interrupt task, the green LED blink task, and the main business task.
+ * @brief  Program entry point. Initializes NVS storage (erasing and reinitializing on failure), loads the active WiFi/server config (provisioned-over-serial values from NVS, falling back to the menuconfig defaults), creates the event group, the button sync object, and the sensor message queue, and completes peripheral pin and I2C bus initialization; determines whether this is a power-on boot based on the reset reason, and if so, sounds the buzzer, completes RTC clock and light sensor initialization, and opens the serial provisioning window (protocol §1.2) for a technician to (re)configure WiFi/server settings; processes the sleep wake-up source, then creates the button interrupt task, the green LED blink task, and the main business task.
  */
 void app_main(void)
 {
@@ -200,6 +201,8 @@ void app_main(void)
   {
     ESP_LOGE(TAG, "%dv,nvs_flash_init failed.", __LINE__);
   }
+
+  Provision_Init();  //Load WiFi/server config: NVS-provisioned values (protocol §1.2) override the menuconfig defaults, every boot -- deep sleep wipes RAM so this can't be assumed to persist on its own.
 
   Nets_Group = xEventGroupCreate();  //Create event group for network status flags
   xEventGroupClearBits(Nets_Group, Nets_Group_ALL_BIT);  //Clear all network status bits
@@ -221,6 +224,13 @@ void app_main(void)
     Timer_IC_Init();  //PCF8563 init
     Timer_IC_Reset_Time();  //PCF8563 Reset Time 2018-01-01 00:00:00
     LightSensor_Init();  // light sensor init
+
+    // Give a technician connected over USB a window to send SetupWifi/
+    // SetupServer (protocol §1.2) right after power-up, before this boot
+    // goes on to connect WiFi with whatever config it just loaded. Only on
+    // power-on (not on every periodic timer wake-up) so routine reporting
+    // cycles aren't slowed down waiting on a UART nobody is watching.
+    Provision_RunWindow(PROV_WINDOW_IDLE_TIMEOUT_MS, PROV_WINDOW_MAX_TOTAL_MS);
   }
   WakeUp_Process();  //Handle deep-sleep wake-up cause
 

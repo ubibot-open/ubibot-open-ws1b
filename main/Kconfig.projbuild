@@ -8,12 +8,20 @@ menu "UbiBot WS1B Configuration"
             help
                 SSID (network name) the device connects to for reporting data.
 
+                This is only the factory default baked in at build time. A
+                device that has received a SetupWifi command over the serial
+                console (protocol §1.2, see main/provisioning.c) uses that
+                provisioned value instead, persisted in NVS, until it is
+                erased or re-provisioned -- reflashing with a different value
+                here does not override an already-provisioned device.
+
         config USR_WIFI_PASSWORD
             string "WiFi Password"
             default ""
             help
                 WiFi password (WPA/WPA2) for the SSID above. Leave empty for an
-                open network.
+                open network. Same NVS-overrides-Kconfig behavior as the SSID
+                above applies here.
 
         config USR_WIFI_COUNTRY_CODE
             string "WiFi country code"
@@ -33,10 +41,17 @@ menu "UbiBot WS1B Configuration"
                 IP address or domain name of the server the device reports
                 sensor data and syncs time with.
 
+                Factory default only -- a SetupServer command over the
+                serial console (protocol §1.2) overrides this at runtime,
+                same as WiFi SSID/password above.
+
         config USR_HTTP_PORT
             int "Data server port"
             default 8080
             range 1 65535
+            help
+                Same NVS-overrides-Kconfig behavior as the host above
+                applies here.
 
     endmenu
 
