@@ -16,15 +16,17 @@ Go to the `UbiBot WS1B Configuration` menu and adjust as needed:
 
 The resulting configuration is saved to the local `sdkconfig` file (excluded via `.gitignore`, so it is never committed) and is generated automatically on first build or after running `idf.py menuconfig`. Default values are defined in [main/Kconfig.projbuild](main/Kconfig.projbuild).
 
-## Serial provisioning (WiFi / server, no reflash needed)
+## Serial provisioning (WiFi / server / serial number, no reflash needed)
 
 The menuconfig values above are only the **factory default** baked in at build time. WiFi
-credentials and the server address can also be set at runtime over the same USB/UART console
-used for logs and `idf.py monitor` (115200 baud) — see [main/provisioning.c](main/provisioning.c),
-implementing protocol §1.2 of the
+credentials, the server address, and the device's own serial number can also be set at runtime
+over the same USB/UART console used for logs and `idf.py monitor` (115200 baud) — see
+[main/provisioning.c](main/provisioning.c), implementing protocol §1.2 of the
 [Hardware Communication Protocol](https://github.com/ubibot-open/ubibot-open-doc/blob/main/protocol/hardware-communication-protocol.md#12-serial-provisioning).
 A provisioned value is persisted in NVS and takes priority over the menuconfig default on every
-subsequent boot, until re-provisioned.
+subsequent boot, until re-provisioned. In particular, `SetupDevice` (below) is what lets one
+compiled firmware image (one pid, no sn baked in) be flashed onto a whole production batch, with
+each unit's own sn set afterward over serial instead of recompiling per unit.
 
 **Window**: right after a power-on (not on the periodic timer wake-ups used for routine
 reporting), the device listens on the console UART for up to 60s, closing early after 5s of
@@ -37,13 +39,16 @@ serial terminal — one JSON object per line:
 {"command":"SetupWifi","ssid":"MyHomeWiFi","password":"12345678","type":"WPA2"}
 // Set the data server
 {"command":"SetupServer","host":"192.168.2.71","port":8080}
+// Set this unit's own serial number
+{"command":"SetupDevice","sn":"RV41554WS1B"}
 ```
 
 Each command gets a one-line JSON ack back, e.g. `{"c":0,"msg":"wifi saved"}` on success or
 `{"c":1,"msg":"<reason>"}` on a validation error (`c":2` means the NVS write itself failed).
-`ssid`/`host`/`port` are required; `password` may be omitted/empty for an open network; `type` is
-required by the protocol but is only stored today, not yet used to constrain the WiFi auth-mode
-threshold when connecting.
+`ssid`/`host`/`port`/`sn` are required; `password` may be omitted/empty for an open network;
+`type` is required by the protocol but is only stored today, not yet used to constrain the WiFi
+auth-mode threshold when connecting. There's no `SetupDevice` support for `pid` — unlike `sn`,
+every unit built from the same firmware image is expected to share it.
 
 Bluetooth provisioning (protocol §1.1) is **not supported** by this firmware — serial
 provisioning is the only way to change WiFi/server settings without a full rebuild+reflash.

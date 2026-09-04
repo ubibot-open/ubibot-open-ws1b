@@ -68,10 +68,17 @@ menu "UbiBot WS1B Configuration"
             string "Device serial number"
             default "RV41554WS1B"
             help
-                Unique serial number for this physical device. Each unit
-                should be flashed with its own value here (set via
-                `idf.py menuconfig` before building) rather than sharing one
-                baked-in value across a production batch.
+                Unique serial number for this physical device.
+
+                Factory default only -- a SetupDevice command over the
+                serial console (protocol §1.2, see main/provisioning.c)
+                overrides this at runtime, same NVS-overrides-Kconfig
+                behavior as WiFi/server settings above. This is the
+                intended way to give each unit its own sn across a
+                production batch: flash every unit from the same build
+                (sharing this default), then set each one's real sn
+                afterward over serial -- no need to flash a separate build
+                per unit just to vary this one field.
 
     endmenu
 

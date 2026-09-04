@@ -1,5 +1,6 @@
 /*******************************************************************************
-  * @file       Serial Provisioning (protocol §1.2: SetupWifi / SetupServer)
+  * @file       Serial Provisioning (protocol §1.2: SetupWifi / SetupServer /
+  *             SetupDevice)
   * @author
   * @version
   * @date
@@ -35,6 +36,7 @@
 #define PROV_KEY_WIFI_TYPE   "wifi_type"
 #define PROV_KEY_HTTP_HOST   "http_host"
 #define PROV_KEY_HTTP_PORT   "http_port"
+#define PROV_KEY_SN          "sn"
 
 // Sized generously above real-world limits (WiFi SSID <=32 bytes, WPA2
 // password <=64 bytes) rather than tightly, so a slightly-too-long value is
@@ -43,6 +45,9 @@
 #define PROV_PASSWORD_MAX_LEN 65
 #define PROV_TYPE_MAX_LEN     16
 #define PROV_HOST_MAX_LEN     128
+// Matches the server's Device.SN column (docs §3: size:64) plus a
+// terminator.
+#define PROV_SN_MAX_LEN       65
 
 #define PROV_UART_NUM       (CONFIG_ESP_CONSOLE_UART_NUM)
 #define PROV_UART_BAUDRATE  (CONFIG_ESP_CONSOLE_UART_BAUDRATE)
@@ -58,6 +63,7 @@ static char s_wifi_password[PROV_PASSWORD_MAX_LEN];
 static char s_wifi_type[PROV_TYPE_MAX_LEN];
 static char s_http_host[PROV_HOST_MAX_LEN];
 static uint16_t s_http_port;
+static char s_sn[PROV_SN_MAX_LEN];
 
 /**
  * @brief  Installs the UART driver on the console UART (idempotent -- safe
@@ -122,6 +128,25 @@ static esp_err_t prov_save_server(const char *host, uint16_t port)
   }
   err = nvs_set_str(h, PROV_KEY_HTTP_HOST, host);
   if (err == ESP_OK) err = nvs_set_u16(h, PROV_KEY_HTTP_PORT, port);
+  if (err == ESP_OK) err = nvs_commit(h);
+  nvs_close(h);
+  return err;
+}
+
+/**
+ * @brief  Opens the provisioning NVS namespace read-write, writes sn,
+ *         commits, and closes it.
+ * @return ESP_OK on success; the first failing NVS call's error otherwise.
+ */
+static esp_err_t prov_save_sn(const char *sn)
+{
+  nvs_handle_t h;
+  esp_err_t err = nvs_open(PROV_NVS_NAMESPACE, NVS_READWRITE, &h);
+  if (err != ESP_OK)
+  {
+    return err;
+  }
+  err = nvs_set_str(h, PROV_KEY_SN, sn);
   if (err == ESP_OK) err = nvs_commit(h);
   nvs_close(h);
   return err;
@@ -231,11 +256,52 @@ static void prov_handle_setup_server(const cJSON *root)
 }
 
 /**
+ * @brief  Handles one parsed `{"command":"SetupDevice","sn":"..."}` line
+ *         (protocol §1.2): lets a whole production batch share one
+ *         compiled firmware image (one pid, no sn baked in) by setting
+ *         each physical unit's own serial number after flashing, over
+ *         serial, instead of recompiling per unit. Validates `sn`,
+ *         persists it to NVS, updates the in-RAM active value so the
+ *         change also applies to the current boot, and prints a one-line
+ *         JSON ack/error back over the console UART. There is no
+ *         `SetupDevice` support for pid -- unlike sn, every unit built
+ *         from the same firmware image is expected to share it.
+ * @param  root Parsed JSON object for the command line (not consumed/freed
+ *         here -- the caller owns it).
+ */
+static void prov_handle_setup_device(const cJSON *root)
+{
+  const cJSON *sn = cJSON_GetObjectItemCaseSensitive(root, "sn");
+
+  if (!cJSON_IsString(sn) || sn->valuestring[0] == '\0')
+  {
+    printf("{\"c\":1,\"msg\":\"sn is required\"}\r\n");
+    return;
+  }
+  if (strlen(sn->valuestring) >= sizeof(s_sn))
+  {
+    printf("{\"c\":1,\"msg\":\"sn too long\"}\r\n");
+    return;
+  }
+
+  if (prov_save_sn(sn->valuestring) != ESP_OK)
+  {
+    printf("{\"c\":2,\"msg\":\"failed to save sn\"}\r\n");
+    return;
+  }
+
+  strlcpy(s_sn, sn->valuestring, sizeof(s_sn));
+
+  ESP_LOGI(TAG, "device provisioned: sn=%s", s_sn);
+  printf("{\"c\":0,\"msg\":\"sn saved\"}\r\n");
+}
+
+/**
  * @brief  Parses one received line as JSON and dispatches it to
- *         prov_handle_setup_wifi/prov_handle_setup_server based on its
- *         `command` field, printing a one-line JSON error back over the
- *         console UART for anything that isn't valid JSON or isn't a
- *         recognized command.
+ *         prov_handle_setup_wifi/prov_handle_setup_server/
+ *         prov_handle_setup_device based on its `command` field, printing
+ *         a one-line JSON error back over the console UART for anything
+ *         that isn't valid JSON or isn't a recognized command.
  * @param  line NUL-terminated line received from the console UART (no
  *         trailing CR/LF).
  */
@@ -266,6 +332,10 @@ static void prov_handle_line(const char *line)
   {
     prov_handle_setup_server(root);
   }
+  else if (strcmp(command->valuestring, "SetupDevice") == 0)
+  {
+    prov_handle_setup_device(root);
+  }
   else
   {
     printf("{\"c\":1,\"msg\":\"unknown command\"}\r\n");
@@ -282,6 +352,7 @@ void Provision_Init(void)
   s_wifi_type[0] = '\0';
   strlcpy(s_http_host, USR_HTTP_HOST, sizeof(s_http_host));
   s_http_port = USR_HTTP_PORT;
+  strlcpy(s_sn, USR_SN, sizeof(s_sn));
 
   // ...then override whichever fields have a previously-provisioned value
   // in NVS. Read into a scratch buffer first and only copy over on success,
@@ -324,10 +395,16 @@ void Provision_Init(void)
       s_http_port = port_val;
     }
 
+    len = sizeof(s_sn);
+    if (nvs_get_str(h, PROV_KEY_SN, tmp, &len) == ESP_OK)
+    {
+      strlcpy(s_sn, tmp, sizeof(s_sn));
+    }
+
     nvs_close(h);
   }
 
-  ESP_LOGI(TAG, "active config: ssid=%s host=%s port=%u", s_wifi_ssid, s_http_host, s_http_port);
+  ESP_LOGI(TAG, "active config: sn=%s ssid=%s host=%s port=%u", s_sn, s_wifi_ssid, s_http_host, s_http_port);
 }
 
 void Provision_RunWindow(uint32_t idle_timeout_ms, uint32_t max_total_ms)
@@ -341,7 +418,7 @@ void Provision_RunWindow(uint32_t idle_timeout_ms, uint32_t max_total_ms)
   const TickType_t idle_ticks = pdMS_TO_TICKS(idle_timeout_ms);
   const TickType_t max_ticks = pdMS_TO_TICKS(max_total_ms);
 
-  printf("{\"c\":0,\"msg\":\"provisioning window open, send SetupWifi/SetupServer JSON now\"}\r\n");
+  printf("{\"c\":0,\"msg\":\"provisioning window open, send SetupWifi/SetupServer/SetupDevice JSON now\"}\r\n");
 
   for (;;)
   {
@@ -406,6 +483,11 @@ const char *Provision_GetHttpHost(void)
 uint16_t Provision_GetHttpPort(void)
 {
   return s_http_port;
+}
+
+const char *Provision_GetSN(void)
+{
+  return s_sn;
 }
 
 /*******************************************************************************
