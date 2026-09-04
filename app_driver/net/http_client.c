@@ -22,6 +22,7 @@
 #include "http_client.h"
 #include "PCF8563.h"
 #include "cJSON.h"
+#include "command.h"
 
 #define TAG "http_client"
 
@@ -79,7 +80,7 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt)
 }
 
 /**
- * @brief  Parses the JSON data returned in the server's POST response: extracts the "c" (result code) field for log output, and extracts the "t" (timestamp) field to update the system's Unix time accordingly.
+ * @brief  Parses the JSON data returned in the server's POST response: extracts the "c" (result code) field for log output, extracts the "t" (timestamp) field to update the system's Unix time accordingly, and hands the parsed object to Command_HandleResponse() in case the server queued a command (protocol §9, only ever present on a data-report response -- a no-op when it's absent, e.g. on a time-sync response).
  * @param  ptr Pointer to the JSON-formatted string to parse (input).
  * @return FAILURE (-1) means the input pointer was NULL or JSON parsing failed.
  */
@@ -92,7 +93,7 @@ int Parse_Response(char *ptr)
   }
   cJSON *pJson = cJSON_Parse(ptr);
   if(pJson ==NULL )
-  { 
+  {
     return res_val;
   }
   cJSON *pSub = cJSON_GetObjectItem(pJson, "c");  //c,0 success
@@ -100,14 +101,15 @@ int Parse_Response(char *ptr)
   {
     res_val=pSub->valueint;
     ESP_LOGI(TAG, "\"c\":%d\r\n",pSub->valueint);
-  }  
+  }
   pSub = cJSON_GetObjectItem(pJson, "t");  //time
   if(NULL!=pSub)
-  { 
+  {
     ESP_LOGI(TAG, "\"t\":%d\r\n",pSub->valueint);
     Update_UnixTime(pSub->valueint);  //update time
   }
-  cJSON_Delete(pJson);  //delete pJson 
+  Command_HandleResponse(pJson);  //act on an optional server-queued command, if present (protocol §9)
+  cJSON_Delete(pJson);  //delete pJson
   return res_val;
 }
 

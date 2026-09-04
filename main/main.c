@@ -38,6 +38,7 @@
 #include "power_mgmt.h"
 #include "json_payload.h"
 #include "provisioning.h"
+#include "command.h"
 
 #define TAG "MAIN"
 
@@ -178,12 +179,12 @@ void Main_Task(void *pvParameters)
       free(http_tx_buf);
       free(http_rx_buf);
     }
-    Enter_Sleep(DEFAULT_FN);  //Enter deep sleep until next timer/button wake-up
+    Enter_Sleep(Command_GetReportIntervalSeconds());  //Enter deep sleep until next timer/button wake-up; interval is the server-commanded value if one was ever set (protocol §9), else DEFAULT_FN
   }
 }
 
 /**
- * @brief  Program entry point. Initializes NVS storage (erasing and reinitializing on failure), loads the active WiFi/server config (provisioned-over-serial values from NVS, falling back to the menuconfig defaults), creates the event group, the button sync object, and the sensor message queue, and completes peripheral pin and I2C bus initialization; determines whether this is a power-on boot based on the reset reason, and if so, sounds the buzzer, completes RTC clock and light sensor initialization, and opens the serial provisioning window (protocol §1.2) for a technician to (re)configure WiFi/server settings; processes the sleep wake-up source, then creates the button interrupt task, the green LED blink task, and the main business task.
+ * @brief  Program entry point. Initializes NVS storage (erasing and reinitializing on failure), loads the active WiFi/server config and report interval (provisioned-over-serial values / server-commanded values from NVS, falling back to the menuconfig/DEFAULT_FN defaults -- protocol §1.2/§9), creates the event group, the button sync object, and the sensor message queue, and completes peripheral pin and I2C bus initialization; determines whether this is a power-on boot based on the reset reason, and if so, sounds the buzzer, completes RTC clock and light sensor initialization, and opens the serial provisioning window (protocol §1.2) for a technician to (re)configure WiFi/server settings; processes the sleep wake-up source, then creates the button interrupt task, the green LED blink task, and the main business task.
  */
 void app_main(void)
 {
@@ -203,6 +204,7 @@ void app_main(void)
   }
 
   Provision_Init();  //Load WiFi/server config: NVS-provisioned values (protocol §1.2) override the menuconfig defaults, every boot -- deep sleep wipes RAM so this can't be assumed to persist on its own.
+  Command_Init();  //Load the active report interval: the last server-commanded value (protocol §9) if any, else DEFAULT_FN -- same every-boot reasoning as Provision_Init() above.
 
   Nets_Group = xEventGroupCreate();  //Create event group for network status flags
   xEventGroupClearBits(Nets_Group, Nets_Group_ALL_BIT);  //Clear all network status bits

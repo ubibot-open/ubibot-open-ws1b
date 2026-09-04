@@ -48,6 +48,24 @@ threshold when connecting.
 Bluetooth provisioning (protocol §1.1) is **not supported** by this firmware — serial
 provisioning is the only way to change WiFi/server settings without a full rebuild+reflash.
 
+## Server-issued commands (reboot / report interval)
+
+A data-report response may carry an optional `cmd` object — an admin-queued command, delivered
+piggybacked on this device's own next report (protocol
+[§9](https://github.com/ubibot-open/ubibot-open-doc/blob/main/protocol/hardware-communication-protocol.md#9-command-delivery-admin-triggered-optional)).
+This firmware implements it in [main/command.c](main/command.c), handled from the same response
+parser that reads `c`/`t` ([app_driver/net/http_client.c](app_driver/net/http_client.c)):
+
+- `{"action":"reboot"}` — restarts immediately (`esp_restart()`).
+- `{"action":"set_interval","seconds":600}` — persists the new report interval to NVS; applies
+  starting with the *next* sleep cycle (the one already under way keeps whatever interval was
+  active when it started). Read back via `Command_GetReportIntervalSeconds()`, used in place of
+  the `DEFAULT_FN` constant when the device goes to sleep.
+
+There's no ack sent back to the server for either action — delivery is fire-and-forget, same as
+serial provisioning's philosophy above. Queue a command from a device's detail page in the admin
+console (see the [deployment guide](https://github.com/ubibot-open/ubibot-open-doc/blob/main/guides/deployment-flashing-guide.md#25-sending-a-command-to-a-device-optional)).
+
 ## Contributing
 
 See the [org-wide CONTRIBUTING.md](https://github.com/ubibot-open/.github/blob/main/CONTRIBUTING.md).
